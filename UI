@@ -1,7 +1,7 @@
 -- EnderPlex.lua
 -- Версия: 1.5
 -- Библиотека для GUI в Roblox, работает с KRNL
--- Все баги исправлены, добавлены настройки и новые элементы
+-- Все баги исправлены, добавлены настройки, новые элементы и система биндов
 
 local EnderPlex = {}
 
@@ -10,6 +10,9 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
+
+-- Загрузка системы уведомлений
+local Notification = loadstring(game:HttpGet("https://raw.githubusercontent.com/Jxereas/UI-Libraries/main/notification_gui_library.lua", true))()
 
 -- Игрок и GUI
 local player = Players.LocalPlayer
@@ -31,13 +34,13 @@ end
 
 -- Тема по умолчанию
 local defaultTheme = {
-    PrimaryColor = Color3.fromRGB(28, 28, 28), -- Фон окна
-    SecondaryColor = Color3.fromRGB(35, 35, 35), -- Фон элементов
-    AccentColor = Color3.fromRGB(65, 105, 225), -- Акцент
-    TextColor = Color3.fromRGB(240, 240, 240), -- Текст
-    ErrorColor = Color3.fromRGB(220, 50, 50), -- Ошибки
-    ShadowColor = Color3.fromRGB(0, 0, 0), -- Тень
-    Font = Enum.Font.Gotham, -- Шрифт
+    PrimaryColor = Color3.fromRGB(28, 28, 28),
+    SecondaryColor = Color3.fromRGB(35, 35, 35),
+    AccentColor = Color3.fromRGB(65, 105, 225),
+    TextColor = Color3.fromRGB(240, 240, 240),
+    ErrorColor = Color3.fromRGB(220, 50, 50),
+    ShadowColor = Color3.fromRGB(0, 0, 0),
+    Font = Enum.Font.Gotham,
     FontBold = Enum.Font.GothamBold
 }
 
@@ -45,12 +48,12 @@ local defaultTheme = {
 local settings = {
     ThemeName = "Dark",
     Theme = defaultTheme,
-    ToggleKey = Enum.KeyCode.RightShift, -- Горячая клавиша
-    SaveState = false -- Сохранение состояния GUI
+    ToggleKey = Enum.KeyCode.RightShift,
+    SaveState = false
 }
 
--- Список уведомлений
-local notifications = {}
+-- Список биндов
+local binds = {}
 
 -- Главное окно
 function EnderPlex:CreateWindow(title, toggleKey, customTheme)
@@ -58,7 +61,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
     if customTheme then settings.Theme = customTheme end
     if toggleKey then settings.ToggleKey = Enum.KeyCode[toggleKey] end
 
-    -- ScreenGui
     local screenGui = createInstance("ScreenGui", {
         Name = "EnderPlexUI",
         Parent = playerGui,
@@ -66,10 +68,9 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     })
 
-    -- Основной фрейм
     local mainFrame = createInstance("Frame", {
         Size = UDim2.new(0, 600, 0, 400),
-        Position = UDim2.new(0.5, -300, 1, 100), -- Начальная позиция вне экрана
+        Position = UDim2.new(0.5, -300, 1, 100),
         BackgroundColor3 = settings.Theme.PrimaryColor,
         BorderSizePixel = 0,
         Active = true,
@@ -79,7 +80,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         BackgroundTransparency = 1
     })
 
-    -- Анимация появления
     TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, -300, 0.5, -200),
         BackgroundTransparency = 0
@@ -87,7 +87,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = mainFrame})
 
-    -- Тень
     local shadow = createInstance("ImageLabel", {
         Size = UDim2.new(1, 20, 1, 20),
         Position = UDim2.new(0, -10, 0, -10),
@@ -103,7 +102,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     TweenService:Create(shadow, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
 
-    -- Заголовок
     local titleBar = createInstance("Frame", {
         Size = UDim2.new(1, 0, 0, 40),
         BackgroundColor3 = settings.Theme.SecondaryColor,
@@ -127,7 +125,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         ZIndex = 3
     })
 
-    -- Кнопка закрытия
     local closeButton = createInstance("TextButton", {
         Size = UDim2.new(0, 30, 0, 30),
         Position = UDim2.new(1, -35, 0, 5),
@@ -142,7 +139,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     local uICornerClose = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = closeButton})
 
-    -- Кнопка настроек
     local settingsButton = createInstance("TextButton", {
         Size = UDim2.new(0, 30, 0, 30),
         Position = UDim2.new(1, -70, 0, 5),
@@ -157,7 +153,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     local uICornerSettings = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsButton})
 
-    -- Анимация кнопок
     for _, btn in ipairs({closeButton, settingsButton}) do
         btn.MouseEnter:Connect(function()
             TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
@@ -171,7 +166,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         end)
     end
 
-    -- Фрейм настроек
     local settingsFrame = createInstance("Frame", {
         Size = UDim2.new(1, -20, 1, -60),
         Position = UDim2.new(0, 10, 0, 50),
@@ -223,7 +217,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     local uICornerKeybind = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindButton})
 
-    -- Переключатель сохранения состояния
     local saveStateToggleFrame = createInstance("Frame", {
         Size = UDim2.new(1, 0, 0, 35),
         BackgroundTransparency = 1,
@@ -278,7 +271,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         end
     end)
 
-    -- Предупреждение при закрытии
     local function showWarning(callback)
         local warningFrame = createInstance("Frame", {
             Size = UDim2.new(0, 300, 0, 150),
@@ -346,7 +338,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         end)
     end
 
-    -- Логика видимости
     local isVisible = true
     local isSettingsOpen = false
     local tabContainer, tabMenu = nil, nil
@@ -371,7 +362,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         if tabMenu then tabMenu.Visible = not isSettingsOpen end
     end)
 
-    -- Горячая клавиша
     local function bindToggleKey()
         UserInputService.InputBegan:Connect(function(input, processed)
             if not processed and input.KeyCode == settings.ToggleKey then
@@ -385,7 +375,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
     end
     bindToggleKey()
 
-    -- Смена горячей клавиши
     local waitingForKey = false
     keybindButton.MouseButton1Click:Connect(function()
         if waitingForKey then return end
@@ -407,7 +396,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         end)
     end)
 
-    -- Боковое меню вкладок
     tabMenu = createInstance("Frame", {
         Size = UDim2.new(0, 150, 1, -40),
         Position = UDim2.new(0, 0, 0, 40),
@@ -423,7 +411,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         Parent = tabMenu
     })
 
-    -- Контейнер вкладок
     tabContainer = createInstance("Frame", {
         Size = UDim2.new(1, -150, 1, -40),
         Position = UDim2.new(0, 150, 0, 40),
@@ -432,7 +419,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         ZIndex = 2
     })
 
-    -- Сохранение состояния
     local function saveState()
         if not settings.SaveState then return end
         local state = {
@@ -457,7 +443,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
     end
     loadState()
 
-    -- Окно
     local window = {
         Frame = mainFrame,
         ScreenGui = screenGui,
@@ -466,61 +451,12 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         TabContainer = tabContainer
     }
 
-    -- Уведомление
-    function window:CreateNotification(text, duration)
-        if type(text) ~= "string" then return end
-        duration = duration or 3
-
-        local notifFrame = createInstance("Frame", {
-            Size = UDim2.new(0, 250, 0, 60),
-            Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65)),
-            BackgroundColor3 = settings.Theme.SecondaryColor,
-            BorderSizePixel = 0,
-            Parent = screenGui,
-            ZIndex = 10 + #notifications,
-            BackgroundTransparency = 1
-        })
-
-        local uICornerNotif = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = notifFrame})
-
-        local notifLabel = createInstance("TextLabel", {
-            Size = UDim2.new(1, -10, 1, -10),
-            Position = UDim2.new(0, 5, 0, 5),
-            BackgroundTransparency = 1,
-            Text = text,
-            TextColor3 = settings.Theme.TextColor,
-            Font = settings.Theme.Font,
-            TextSize = 14,
-            TextWrapped = true,
-            Parent = notifFrame,
-            ZIndex = 11
-        })
-
-        table.insert(notifications, notifFrame)
-
-        TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
-            Position = UDim2.new(1, -260, 1, -70 - (#notifications * 65)),
-            BackgroundTransparency = 0
-        }):Play()
-
-        task.spawn(function()
-            task.wait(duration)
-            TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
-                Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65)),
-                BackgroundTransparency = 1
-            }):Play()
-            task.wait(0.5)
-            for i, n in ipairs(notifications) do
-                if n == notifFrame then table.remove(notifications, i) end
-            end
-            notifFrame:Destroy()
-            for i, n in ipairs(notifications) do
-                TweenService:Create(n, TweenInfo.new(0.3), {Position = UDim2.new(1, -260, 1, -70 - (i * 65))}):Play()
-            end
-        end)
+    function window:CreateNotification(type, heading, body, autoRemove, autoRemoveTime, onClose)
+        if type == nil or heading == nil or body == nil then return end
+        local notif = Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClose)
+        return notif
     end
 
-    -- Смена темы
     function window:SetTheme(themeName)
         if themeName == "Light" then
             settings.Theme = {
@@ -566,7 +502,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         end
     end
 
-    -- Создание вкладки
     function window:CreateTab(name)
         if type(name) ~= "string" then name = "Tab" end
 
@@ -641,7 +576,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             tabButton.BackgroundColor3 = settings.Theme.AccentColor
         end
 
-        -- Кнопка
         function tab:CreateButton(text, callback, hotkey)
             if type(text) ~= "string" or type(callback) ~= "function" then return end
 
@@ -690,7 +624,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                 ripple.Size = UDim2.new(0, 0, 0, 0)
                 ripple.BackgroundTransparency = 0.7
                 local success, err = pcall(callback)
-                if not success then window:CreateNotification("Ошибка кнопки: " .. tostring(err), 5) end
+                if not success then window:CreateNotification("error", "Ошибка", "Ошибка выполнения: " .. tostring(err), true, 5) end
             end)
 
             button.MouseEnter:Connect(function()
@@ -701,18 +635,19 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             end)
 
             if hotkey and Enum.KeyCode[hotkey] then
+                binds[button] = {Key = Enum.KeyCode[hotkey], Callback = callback}
                 UserInputService.InputBegan:Connect(function(input, processed)
                     if not processed and input.KeyCode == Enum.KeyCode[hotkey] then
                         local success, err = pcall(callback)
-                        if not success then window:CreateNotification("Ошибка горячей клавиши: " .. tostring(err), 5) end
+                        if not success then window:CreateNotification("error", "Ошибка", "Ошибка горячей клавиши: " .. tostring(err), true, 5) end
                     end
                 end)
             end
 
             table.insert(tab.Elements, buttonFrame)
+            return button
         end
 
-        -- Ползунок
         function tab:CreateSlider(name, min, max, default, callback)
             if type(name) ~= "string" or type(min) ~= "number" or type(max) ~= "number" or type(default) ~= "number" or type(callback) ~= "function" then return end
 
@@ -791,7 +726,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                     TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(relativeX, -8, 0, -3)}):Play()
                     label.Text = name .. ": " .. value
                     local success, err = pcall(function() callback(value) end)
-                    if not success then window:CreateNotification("Ошибка ползунка: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка ползунка: " .. tostring(err), true, 5) end
                     lastUpdate = tick()
                 end
             end)
@@ -799,7 +734,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, sliderFrame)
         end
 
-        -- Выпадающий список
         function tab:CreateDropdown(name, options, default, callback)
             if type(name) ~= "string" or type(options) ~= "table" or type(default) ~= "string" or type(callback) ~= "function" then return end
 
@@ -881,7 +815,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                     dropdownList.Visible = false
                     TweenService:Create(dropdownList, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
                     local success, err = pcall(function() callback(option) end)
-                    if not success then window:CreateNotification("Ошибка списка: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка списка: " .. tostring(err), true, 5) end
                 end)
             end
 
@@ -911,7 +845,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, dropdownFrame)
         end
 
-        -- Переключатель
         function tab:CreateToggle(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "boolean" or type(callback) ~= "function" then return end
 
@@ -965,14 +898,13 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                         BackgroundColor3 = isToggled and settings.Theme.AccentColor or settings.Theme.TextColor
                     }):Play()
                     local success, err = pcall(function() callback(isToggled) end)
-                    if not success then window:CreateNotification("Ошибка переключателя: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка переключателя: " .. tostring(err), true, 5) end
                 end
             end)
 
             table.insert(tab.Elements, toggleFrame)
         end
 
-        -- Текстовое поле
         function tab:CreateTextBox(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "string" or type(callback) ~= "function" then return end
 
@@ -1013,14 +945,13 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
                     local success, err = pcall(function() callback(textBox.Text) end)
-                    if not success then window:CreateNotification("Ошибка текстового поля: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка текстового поля: " .. tostring(err), true, 5) end
                 end
             end)
 
             table.insert(tab.Elements, textBoxFrame)
         end
 
-        -- Многострочное текстовое поле
         function tab:CreateMultiLineTextBox(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "string" or type(callback) ~= "function" then return end
 
@@ -1063,14 +994,13 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
                     local success, err = pcall(function() callback(textBox.Text) end)
-                    if not success then window:CreateNotification("Ошибка многострочного поля: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка многострочного поля: " .. tostring(err), true, 5) end
                 end
             end)
 
             table.insert(tab.Elements, textBoxFrame)
         end
 
-        -- Выпадающий список с поиском
         function tab:CreateSearchableDropdown(name, options, default, callback)
             if type(name) ~= "string" or type(options) ~= "table" or type(default) ~= "string" or type(callback) ~= "function" then return end
 
@@ -1173,7 +1103,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                     dropdownList.Visible = false
                     TweenService:Create(dropdownList, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
                     local success, err = pcall(function() callback(option) end)
-                    if not success then window:CreateNotification("Ошибка списка: " .. tostring(err), 5) end
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка списка: " .. tostring(err), true, 5) end
                 end)
             end
 
@@ -1216,7 +1146,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, dropdownFrame)
         end
 
-        -- Выбор цвета
         function tab:CreateColorPicker(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "Color3" or type(callback) ~= "function" then return end
 
@@ -1329,7 +1258,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                     ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, 1, 1))
                 }
                 local success, err = pcall(function() callback(color) end)
-                if not success then window:CreateNotification("Ошибка выбора цвета: " .. tostring(err), 5) end
+                if not success then window:CreateNotification("error", "Ошибка", "Ошибка выбора цвета: " .. tostring(err), true, 5) end
             end
 
             local isDraggingHue = false
@@ -1386,7 +1315,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, colorPickerFrame)
         end
 
-        -- Метка
         function tab:CreateLabel(text)
             if type(text) ~= "string" then return end
 
@@ -1414,7 +1342,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, labelFrame)
         end
 
-        -- Радиокнопки
         function tab:CreateRadioButtons(name, options, default, callback)
             if type(name) ~= "string" or type(options) ~= "table" or type(default) ~= "string" or type(callback) ~= "function" then return end
 
@@ -1488,7 +1415,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
                         end
                         TweenService:Create(indicator, TweenInfo.new(0.2), {BackgroundTransparency = 0, BackgroundColor3 = settings.Theme.AccentColor}):Play()
                         local success, err = pcall(function() callback(option) end)
-                        if not success then window:CreateNotification("Ошибка радиокнопки: " .. tostring(err), 5) end
+                        if not success then window:CreateNotification("error", "Ошибка", "Ошибка радиокнопки: " .. tostring(err), true, 5) end
                     end
                 end)
             end
@@ -1496,16 +1423,48 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, radioFrame)
         end
 
+        -- Функция для изменения бинда
+        function tab:ChangeBind(element, newKey)
+            if not binds[element] or not Enum.KeyCode[newKey] then return end
+            binds[element].Key = Enum.KeyCode[newKey]
+            UserInputService.InputBegan:Connect(function(input, processed)
+                if not processed and input.KeyCode == Enum.KeyCode[newKey] then
+                    local success, err = pcall(binds[element].Callback)
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка бинда: " .. tostring(err), true, 5) end
+                end
+            end)
+            window:CreateNotification("success", "Бинд изменён", "Новый бинд: " .. newKey, true, 3)
+        end
+
+        -- Функция для удаления бинда
+        function tab:RemoveBind(element)
+            if binds[element] then
+                binds[element] = nil
+                window:CreateNotification("info", "Бинд удалён", "Бинд для элемента удалён.", true, 3)
+            end
+        end
+
         return tab
     end
 
-    -- Уничтожение
     function window:Destroy()
         TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -300, 1, 100), BackgroundTransparency = 1}):Play()
         task.wait(0.5)
         local success, err = pcall(function() screenGui:Destroy() end)
-        if not success then window:CreateNotification("Ошибка уничтожения: " .. tostring(err), 5) end
+        if not success then window:CreateNotification("error", "Ошибка", "Ошибка уничтожения: " .. tostring(err), true, 5) end
     end
+
+    -- Обработка биндов
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if not processed then
+            for element, bind in pairs(binds) do
+                if input.KeyCode == bind.Key then
+                    local success, err = pcall(bind.Callback)
+                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка бинда: " .. tostring(err), true, 5) end
+                end
+            end
+        end
+    end)
 
     return window
 end
