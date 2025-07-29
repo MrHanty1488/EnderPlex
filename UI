@@ -1,17 +1,19 @@
--- SimpleUILibrary.lua
+-- EnderPlex.lua
+-- Версия: 2.1
+-- Описание: Библиотека EnderPlex для создания красивых, оптимизированных GUI в Roblox (адаптирована для KRNL)
+-- Автор: Grok (xAI)
+-- Лицензия: MIT (открытый исходный код)
 
-local SimpleUILibrary = {}
+local EnderPlex = {}
 
 -- Службы Roblox
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local DataStoreService = game:GetService("DataStoreService")
 
 -- Локальные переменные
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
-local dataStore = DataStoreService:GetDataStore("SimpleUISettings")
 
 -- Вспомогательные функции
 local function createInstance(class, properties)
@@ -26,7 +28,7 @@ local function lerp(a, b, t)
     return a + (b - a) * t
 end
 
--- Настройки по умолчанию
+-- Настройки темы по умолчанию
 local defaultTheme = {
     PrimaryColor = Color3.fromRGB(30, 30, 30),
     SecondaryColor = Color3.fromRGB(40, 40, 40),
@@ -38,17 +40,17 @@ local defaultTheme = {
 }
 
 -- Создание главного окна
-function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
+function EnderPlex:CreateWindow(title, toggleKey, theme)
     -- Проверка входных параметров
     if type(title) ~= "string" then
-        warn("SimpleUILibrary: Title must be a string")
-        title = "Simple UI"
+        warn("EnderPlex: Title must be a string")
+        title = "EnderPlex UI"
     end
     theme = theme or defaultTheme
 
     -- Создание ScreenGui
     local screenGui = createInstance("ScreenGui", {
-        Name = "SimpleUI",
+        Name = "EnderPlexUI",
         Parent = playerGui,
         ResetOnSpawn = false
     })
@@ -123,7 +125,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             end
         end)
     else
-        warn("SimpleUILibrary: Invalid toggle key, hotkey disabled")
+        warn("EnderPlex: Invalid toggle key, hotkey disabled")
     end
 
     -- Контейнер для категорий
@@ -149,38 +151,6 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             ThemeName = "Dark"
         }
     }
-
-    -- Сохранение настроек
-    local function saveSettings()
-        local success, err = pcall(function()
-            dataStore:SetAsync(player.UserId .. "_UISettings", window.Settings)
-        end)
-        if not success then
-            warn("SimpleUILibrary: Failed to save settings - " .. tostring(err))
-        end
-    end
-
-    -- Загрузка настроек
-    local function loadSettings()
-        local success, result = pcall(function()
-            return dataStore:GetAsync(player.UserId .. "_UISettings")
-        end)
-        if success and result then
-            window.Settings = result
-            if window.Settings.ThemeName == "Light" then
-                window.Theme = {
-                    PrimaryColor = Color3.fromRGB(240, 240, 240),
-                    SecondaryColor = Color3.fromRGB(220, 220, 220),
-                    AccentColor = Color3.fromRGB(0, 100, 200),
-                    TextColor = Color3.fromRGB(0, 0, 0),
-                    ErrorColor = Color3.fromRGB(200, 0, 0),
-                    Font = Enum.Font.SourceSans,
-                    FontBold = Enum.Font.SourceSansBold
-                }
-            end
-        end
-    end
-    loadSettings()
 
     -- Создание уведомления
     function window:CreateNotification(text, duration)
@@ -225,7 +195,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
     -- Создание категории
     function window:CreateCategory(name)
         if type(name) ~= "string" then
-            warn("SimpleUILibrary: Category name must be a string")
+            warn("EnderPlex: Category name must be a string")
             name = "Unnamed Category"
         end
 
@@ -291,7 +261,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание кнопки
         function category:CreateButton(text, callback, hotkey)
             if type(text) ~= "string" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid button parameters")
+                warn("EnderPlex: Invalid button parameters")
                 return
             end
 
@@ -320,7 +290,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             button.MouseButton1Click:Connect(function()
                 local success, err = pcall(callback)
                 if not success then
-                    window:CreateNotification("Error in button callback: " .. tostring(err), 5)
+                    window:CreateNotification("Ошибка в кнопке: " .. tostring(err), 5)
                 end
             end)
 
@@ -339,7 +309,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание ползунка
         function category:CreateSlider(name, min, max, default, callback)
             if type(name) ~= "string" or type(min) ~= "number" or type(max) ~= "number" or type(default) ~= "number" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid slider parameters")
+                warn("EnderPlex: Invalid slider parameters")
                 return
             end
 
@@ -405,7 +375,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
                     label.Text = name .. ": " .. value
                     local success, err = pcall(function() callback(value) end)
                     if not success then
-                        window:CreateNotification("Error in slider callback: " .. tostring(err), 5)
+                        window:CreateNotification("Ошибка в ползунке: " .. tostring(err), 5)
                     end
                 end
             end)
@@ -417,7 +387,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание выпадающего списка
         function category:CreateDropdown(name, options, default, callback)
             if type(name) ~= "string" or type(options) ~= "table" or type(default) ~= "string" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid dropdown parameters")
+                warn("EnderPlex: Invalid dropdown parameters")
                 return
             end
 
@@ -487,7 +457,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
                     dropdownList.Visible = false
                     local success, err = pcall(function() callback(option) end)
                     if not success then
-                        window:CreateNotification("Error in dropdown callback: " .. tostring(err), 5)
+                        window:CreateNotification("Ошибка в выпадающем списке: " .. tostring(err), 5)
                     end
                 end)
 
@@ -507,7 +477,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание переключателя
         function category:CreateToggle(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "boolean" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid toggle parameters")
+                warn("EnderPlex: Invalid toggle parameters")
                 return
             end
 
@@ -520,7 +490,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             local toggleLabel = createInstance("TextLabel", {
                 Size = UDim2.new(1, -50, 1, 0),
                 BackgroundTransparency = 1,
-                Text = name .. ": " .. (default and "On" or "Off"),
+                Text = name .. ": " .. (default and "Вкл" or "Выкл"),
                 TextColor3 = window.Theme.TextColor,
                 Font = window.Theme.Font,
                 TextSize = 16,
@@ -556,12 +526,12 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             toggleButton.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     isToggled = not isToggled
-                    toggleLabel.Text = name .. ": " .. (isToggled and "On" or "Off")
+                    toggleLabel.Text = name .. ": " .. (isToggled and "Вкл" or "Выкл")
                     TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = isToggled and window.Theme.AccentColor or window.Theme.SecondaryColor}):Play()
                     TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = isToggled and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)}):Play()
                     local success, err = pcall(function() callback(isToggled) end)
                     if not success then
-                        window:CreateNotification("Error in toggle callback: " .. tostring(err), 5)
+                        window:CreateNotification("Ошибка в переключателе: " .. tostring(err), 5)
                     end
                 end
             end)
@@ -573,7 +543,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание текстового поля
         function category:CreateTextBox(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "string" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid textbox parameters")
+                warn("EnderPlex: Invalid textbox parameters")
                 return
             end
 
@@ -614,7 +584,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
                 if enterPressed then
                     local success, err = pcall(function() callback(textBox.Text) end)
                     if not success then
-                        window:CreateNotification("Error in textbox callback: " .. tostring(err), 5)
+                        window:CreateNotification("Ошибка в текстовом поле: " .. tostring(err), 5)
                     end
                 end
             end)
@@ -626,7 +596,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
         -- Создание выбора цвета
         function category:CreateColorPicker(name, default, callback)
             if type(name) ~= "string" or type(default) ~= "Color3" or type(callback) ~= "function" then
-                warn("SimpleUILibrary: Invalid color picker parameters")
+                warn("EnderPlex: Invalid color picker parameters")
                 return
             end
 
@@ -737,7 +707,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
                 }
                 local success, err = pcall(function() callback(color) end)
                 if not success then
-                    window:CreateNotification("Error in color picker callback: " .. tostring(err), 5)
+                    window:CreateNotification("Ошибка в выборе цвета: " .. tostring(err), 5)
                 end
             end
 
@@ -800,7 +770,7 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             screenGui:Destroy()
         end)
         if not success then
-            warn("SimpleUILibrary: Failed to destroy window - " .. tostring(err))
+            warn("EnderPlex: Failed to destroy window - " .. tostring(err))
         end
     end
 
@@ -820,24 +790,23 @@ function SimpleUILibrary:CreateWindow(title, toggleKey, theme)
             window.Theme = defaultTheme
         end
         window.Settings.ThemeName = themeName
-        saveSettings()
-        window:CreateNotification("Theme changed to " .. themeName, 3)
+        window:CreateNotification("Тема изменена на " .. themeName, 3)
     end
 
     return window
 end
 
 -- Вспомогательная функция для проверки целостности
-function SimpleUILibrary:SelfTest()
-    local window = SimpleUILibrary:CreateWindow("Test Window", "F")
-    local category = window:CreateCategory("Test Category")
-    category:CreateButton("Test Button", function() print("Button clicked") end, "G")
-    category:CreateSlider("Test Slider", 0, 100, 50, function(value) print("Slider value: " .. value) end)
-    category:CreateDropdown("Test Dropdown", {"Option 1", "Option 2", "Option 3"}, "Option 1", function(value) print("Dropdown selected: " .. value) end)
-    category:CreateToggle("Test Toggle", true, function(value) print("Toggle: " .. tostring(value)) end)
-    category:CreateTextBox("Test TextBox", "Enter text", function(text) print("Text entered: " .. text) end)
-    category:CreateColorPicker("Test Color", Color3.fromRGB(255, 0, 0), function(color) print("Color selected: " .. color:ToHex()) end)
-    window:CreateNotification("Self-test completed", 3)
+function EnderPlex:SelfTest()
+    local window = EnderPlex:CreateWindow("EnderPlex Test", "F")
+    local category = window:CreateCategory("Тестовая категория")
+    category:CreateButton("Тестовая кнопка", function() print("Кнопка нажата") end, "G")
+    category:CreateSlider("Тестовый ползунок", 0, 100, 50, function(value) print("Ползунок: " .. value) end)
+    category:CreateDropdown("Тестовый список", {"Опция 1", "Опция 2", "Опция 3"}, "Опция 1", function(value) print("Выбрано: " .. value) end)
+    category:CreateToggle("Тестовый переключатель", true, function(value) print("Переключатель: " .. tostring(value)) end)
+    category:CreateTextBox("Тестовое поле", "Введите текст", function(text) print("Текст: " .. text) end)
+    category:CreateColorPicker("Тестовый цвет", Color3.fromRGB(255, 0, 0), function(color) print("Цвет: " .. color:ToHex()) end)
+    window:CreateNotification("Самопроверка завершена", 3)
 end
 
-return SimpleUILibrary
+return EnderPlex
