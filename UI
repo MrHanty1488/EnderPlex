@@ -1,7 +1,6 @@
 -- EnderPlex.lua
--- Версия: 1.5
--- Библиотека для GUI в Roblox, работает с KRNL
--- Все баги исправлены, добавлены настройки, новые элементы и система биндов
+-- Версия: 1.6
+-- Библиотека для GUI в Roblox с улучшенными визуалами и встроенной системой уведомлений
 
 local EnderPlex = {}
 
@@ -15,7 +14,7 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
 
--- Создание объектов
+-- Утилита для создания объектов
 local function createInstance(class, props)
     local obj = Instance.new(class)
     for k, v in pairs(props) do
@@ -43,7 +42,7 @@ local defaultTheme = {
     FontBold = Enum.Font.GothamBold
 }
 
--- Настройки (неизменяемые извне)
+-- Настройки
 local settings = {
     ThemeName = "Dark",
     Theme = defaultTheme,
@@ -54,7 +53,7 @@ local settings = {
 -- Список биндов
 local binds = {}
 
--- Система уведомлений
+-- Встроенная система уведомлений
 local Notification = {}
 
 function Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClose)
@@ -162,7 +161,7 @@ function Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClo
     TweenService:Create(shadow, TweenInfo.new(0.5), {ImageTransparency = 0.4}):Play()
     TweenService:Create(closeButton, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
 
-    -- Эффект при наведении на кнопку закрытия
+    -- Эффект при наведении
     closeButton.MouseEnter:Connect(function()
         TweenService:Create(closeButton, TweenInfo.new(0.2), {
             BackgroundColor3 = Color3.fromRGB(
@@ -178,7 +177,7 @@ function Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClo
         }):Play()
     end)
 
-    -- Обработка закрытия
+    -- Закрытие уведомления
     local function closeNotification()
         TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
             Position = UDim2.new(1, 10, 0, 10),
@@ -188,9 +187,7 @@ function Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClo
         TweenService:Create(closeButton, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
         task.wait(0.5)
         notificationGui:Destroy()
-        if onClose then
-            pcall(onClose)
-        end
+        if onClose then pcall(onClose) end
     end
 
     closeButton.MouseButton1Click:Connect(closeNotification)
@@ -199,9 +196,7 @@ function Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClo
     if autoRemove and autoRemoveTime then
         task.spawn(function()
             task.wait(autoRemoveTime)
-            if notificationGui.Parent then
-                closeNotification()
-            end
+            if notificationGui.Parent then closeNotification() end
         end)
     end
 
@@ -235,7 +230,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, -300, 0.5, -200),
-        BackgroundTransparency =  đón
+        BackgroundTransparency = 0
+    }):Play()
 
     local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = mainFrame})
 
@@ -252,7 +248,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         ZIndex = 0
     })
 
-    TweenService:Create(shadow, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(shadow, TweenInfo.new(0.5), {ImageTransparency = 0.4}):Play()
 
     local titleBar = createInstance("Frame", {
         Size = UDim2.new(1, 0, 0, 40),
@@ -381,7 +377,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         Size = UDim2.new(1, -60, 1, 0),
         Position = UDim2.new(0, 5, 0, 0),
         BackgroundTransparency = 1,
-        Text = "Сохранять состояние",
+        Text = "Сохранять состояние: " .. (settings.SaveState and "Вкл" or "Выкл"),
         TextColor3 = settings.Theme.TextColor,
         Font = settings.Theme.Font,
         TextSize = 14,
@@ -402,8 +398,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     local saveStateIndicator = createInstance("Frame", {
         Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(0, 2, 0, 2),
-        BackgroundColor3 = settings.Theme.TextColor,
+        Position = settings.SaveState and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2),
+        BackgroundColor3 = settings.SaveState and settings.Theme.AccentColor or settings.Theme.TextColor,
         Parent = saveStateButton,
         ZIndex = 8
     })
@@ -536,7 +532,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
         connection = UserInputService.InputBegan:Connect(function(input, processed)
             if not processed and input.UserInputType == Enum.UserInputType.Keyboard then
                 local newKey = input.KeyCode
-                if newKey ~= Enum.KeyCode.Unknown and newKey ~= Enum.KeyCode.RightShift then
+                if newKey ~= Enum.KeyCode.Unknown then
                     settings.ToggleKey = newKey
                     keybindButton.Text = newKey.Name
                 else
@@ -605,8 +601,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
     function window:CreateNotification(type, heading, body, autoRemove, autoRemoveTime, onClose)
         if type == nil or heading == nil or body == nil then return end
-        local notif = Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClose)
-        return notif
+        return Notification.new(type, heading, body, autoRemove, autoRemoveTime, onClose)
     end
 
     function window:SetTheme(themeName)
@@ -790,12 +785,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
             if hotkey and Enum.KeyCode[hotkey] then
                 binds[button] = {Key = Enum.KeyCode[hotkey], Callback = callback}
-                UserInputService.InputBegan:Connect(function(input, processed)
-                    if not processed and input.KeyCode == Enum.KeyCode[hotkey] then
-                        local success, err = pcall(callback)
-                        if not success then window:CreateNotification("error", "Ошибка", "Ошибка горячей клавиши: " .. tostring(err), true, 5) end
-                    end
-                end)
             end
 
             table.insert(tab.Elements, buttonFrame)
@@ -1577,33 +1566,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
             table.insert(tab.Elements, radioFrame)
         end
 
-        function tab:ChangeBind(element, newKey)
-            if not binds[element] or not Enum.KeyCode[newKey] then return end
-            binds[element].Key = Enum.KeyCode[newKey]
-            UserInputService.InputBegan:Connect(function(input, processed)
-                if not processed and input.KeyCode == Enum.KeyCode[newKey] then
-                    local success, err = pcall(binds[element].Callback)
-                    if not success then window:CreateNotification("error", "Ошибка", "Ошибка бинда: " .. tostring(err), true, 5) end
-                end
-            end)
-            window:CreateNotification("success", "Бинд изменён", "Новый бинд: " .. newKey, true, 3)
-        end
-
-        function tab:RemoveBind(element)
-            if binds[element] then
-                binds[element] = nil
-                window:CreateNotification("info", "Бинд удалён", "Бинд для элемента удалён.", true, 3)
-            end
-        end
-
         return tab
-    end
-
-    function window:Destroy()
-        TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -300, 1, 100), BackgroundTransparency = 1}):Play()
-        task.wait(0.5)
-        local success, err = pcall(function() screenGui:Destroy() end)
-        if not success then window:CreateNotification("error", "Ошибка", "Ошибка уничтожения: " .. tostring(err), true, 5) end
     end
 
     -- Обработка биндов
