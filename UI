@@ -1,7 +1,7 @@
 -- EnderPlex.lua
 -- Версия: 1.5
 -- Библиотека для GUI в Roblox, работает с KRNL
--- Обновления: удален прогресс-бар, добавлены анимации, предупреждение при закрытии, настройки только через библиотеку
+-- Все баги исправлены, добавлены настройки
 
 local EnderPlex = {}
 
@@ -40,7 +40,7 @@ local defaultTheme = {
 	FontBold = Enum.Font.GothamBold
 }
 
--- Настройки
+-- Настройки (неизменяемые извне)
 local settings = {
 	ThemeName = "Dark",
 	Theme = defaultTheme,
@@ -67,15 +67,19 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 	-- Основной фрейм
 	local mainFrame = createInstance("Frame", {
 		Size = UDim2.new(0, 600, 0, 400),
-		Position = UDim2.new(0.5, -300, 0, -400), -- Начальная позиция вне экрана
+		Position = UDim2.new(0.5, -300, 1, 100), -- Начальная позиция вне экрана
 		BackgroundColor3 = settings.Theme.PrimaryColor,
 		BorderSizePixel = 0,
 		Active = true,
 		Draggable = true,
 		Parent = screenGui,
-		ZIndex = 1,
-		Visible = false
+		ZIndex = 1
 	})
+
+	-- Анимация появления
+	TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0.5, -300, 0.5, -200)
+	}):Play()
 
 	local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = mainFrame})
 
@@ -132,51 +136,218 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 	local uICornerClose = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = closeButton})
 
-	-- Анимация кнопки
-	closeButton.MouseEnter:Connect(function()
-		TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
-			lerp(closeButton.BackgroundColor3.R * 255, 255, 0.2),
-			lerp(closeButton.BackgroundColor3.G * 255, 100, 0.2),
-			lerp(closeButton.BackgroundColor3.B * 255, 100, 0.2)
-		)}):Play()
-	end)
-	closeButton.MouseLeave:Connect(function()
-		TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = settings.Theme.ErrorColor}):Play()
-	end)
+	-- Кнопка настроек
+	local settingsButton = createInstance("TextButton", {
+		Size = UDim2.new(0, 30, 0, 30),
+		Position = UDim2.new(1, -70, 0, 5),
+		BackgroundColor3 = settings.Theme.SecondaryColor,
+		Text = "⚙",
+		TextColor3 = settings.Theme.TextColor,
+		Font = settings.Theme.Font,
+		TextSize = 14,
+		Parent = titleBar,
+		ZIndex = 3
+	})
 
-	-- Функции анимации
-	local isVisible = false
-	local function showGUI()
-		if isVisible then return end
-		isVisible = true
-		mainFrame.Visible = true
-		local tween = TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -300, 0.5, -200)})
-		tween:Play()
-	end
+	local uICornerSettings = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsButton})
 
-	local function hideGUI()
-		if not isVisible then return end
-		local tween = TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -300, 0, -400)})
-		tween:Play()
-		tween.Completed:Connect(function()
-			mainFrame.Visible = false
-			isVisible = false
+	-- Анимация кнопок
+	for _, btn in ipairs({closeButton, settingsButton}) do
+		btn.MouseEnter:Connect(function()
+			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
+				lerp(btn.BackgroundColor3.R * 255, 255, 0.2),
+				lerp(btn.BackgroundColor3.G * 255, 100, 0.2),
+				lerp(btn.BackgroundColor3.B * 255, 100, 0.2)
+			)}):Play()
+		end)
+		btn.MouseLeave:Connect(function()
+			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = btn == closeButton and settings.Theme.ErrorColor or settings.Theme.SecondaryColor}):Play()
 		end)
 	end
 
-	-- Горячая клавиша
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == settings.ToggleKey then
-			if isVisible then
-				hideGUI()
-			else
-				showGUI()
+	-- Фрейм настроек
+	local settingsFrame = createInstance("Frame", {
+		Size = UDim2.new(1, -20, 1, -60),
+		Position = UDim2.new(0, 10, 0, 50),
+		BackgroundColor3 = settings.Theme.SecondaryColor,
+		BorderSizePixel = 0,
+		Parent = mainFrame,
+		ZIndex = 5,
+		Visible = false,
+		BackgroundTransparency = 1
+	})
+
+	local uICornerSettingsFrame = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsFrame})
+
+	local settingsLabel = createInstance("TextLabel", {
+		Size = UDim2.new(1, -10, 0, 30),
+		Position = UDim2.new(0, 5, 0, 5),
+		BackgroundTransparency = 1,
+		Text = "Настройки",
+		TextColor3 = settings.Theme.TextColor,
+		Font = settings.Theme.FontBold,
+		TextSize = 16,
+		Parent = settingsFrame,
+		ZIndex = 6
+	})
+
+	local keybindLabel = createInstance("TextLabel", {
+		Size = UDim2.new(0, 150, 0, 30),
+		Position = UDim2.new(0, 5, 0, 40),
+		BackgroundTransparency = 1,
+		Text = "Горячая клавиша:",
+		TextColor3 = settings.Theme.TextColor,
+		Font = settings.Theme.Font,
+		TextSize = 14,
+		Parent = settingsFrame,
+		ZIndex = 6
+	})
+
+	local keybindButton = createInstance("TextButton", {
+		Size = UDim2.new(0, 100, 0, 30),
+		Position = UDim2.new(0, 160, 0, 40),
+		BackgroundColor3 = settings.Theme.SecondaryColor,
+		Text = settings.ToggleKey.Name,
+		TextColor3 = settings.Theme.TextColor,
+		Font = settings.Theme.Font,
+		TextSize = 14,
+		Parent = settingsFrame,
+		ZIndex = 6
+	})
+
+	local uICornerKeybind = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindButton})
+
+	-- Логика видимости
+	local isVisible = true
+	local isSettingsOpen = false
+	local tabContainer, tabMenu = nil, nil
+
+	-- Предупреждение при закрытии
+	local function showWarning(callback)
+		local warningFrame = createInstance("Frame", {
+			Size = UDim2.new(0, 300, 0, 150),
+			Position = UDim2.new(0.5, -150, 0.5, -75),
+			BackgroundColor3 = settings.Theme.PrimaryColor,
+			BorderSizePixel = 0,
+			Parent = screenGui,
+			ZIndex = 100,
+			BackgroundTransparency = 1
+		})
+
+		local uICornerWarning = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = warningFrame})
+
+		local warningLabel = createInstance("TextLabel", {
+			Size = UDim2.new(1, -20, 0, 50),
+			Position = UDim2.new(0, 10, 0, 10),
+			BackgroundTransparency = 1,
+			Text = "Вы уверены, что хотите закрыть GUI навсегда?",
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 14,
+			TextWrapped = true,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+
+		local confirmButton = createInstance("TextButton", {
+			Size = UDim2.new(0, 100, 0, 30),
+			Position = UDim2.new(0.5, -110, 1, -40),
+			BackgroundColor3 = settings.Theme.AccentColor,
+			Text = "Да",
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 14,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+
+		local cancelButton = createInstance("TextButton", {
+			Size = UDim2.new(0, 100, 0, 30),
+			Position = UDim2.new(0.5, 10, 1, -40),
+			BackgroundColor3 = settings.Theme.SecondaryColor,
+			Text = "Нет",
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 14,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+
+		-- Анимация появления предупреждения
+		TweenService:Create(warningFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+
+		confirmButton.MouseButton1Click:Connect(function()
+			TweenService:Create(warningFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+			task.wait(0.3)
+			warningFrame:Destroy()
+			if callback then callback(true) end
+		end)
+
+		cancelButton.MouseButton1Click:Connect(function()
+			TweenService:Create(warningFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+			task.wait(0.3)
+			warningFrame:Destroy()
+			if callback then callback(false) end
+		end)
+	end
+
+	closeButton.MouseButton1Click:Connect(function()
+		showWarning(function(confirmed)
+			if confirmed then
+				TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -300, 1, 100)}):Play()
+				task.wait(0.5)
+				screenGui:Destroy()
 			end
-		end
+		end)
+	end)
+
+	settingsButton.MouseButton1Click:Connect(function()
+		isSettingsOpen = not isSettingsOpen
+		TweenService:Create(settingsFrame, TweenInfo.new(0.3), {
+			BackgroundTransparency = isSettingsOpen and 0 or 1,
+			Visible = isSettingsOpen
+		}):Play()
+		if tabContainer then tabContainer.Visible = not isSettingsOpen end
+		if tabMenu then tabMenu.Visible = not isSettingsOpen end
+	end)
+
+	-- Горячая клавиша
+	local function bindToggleKey()
+		UserInputService.InputBegan:Connect(function(input, processed)
+			if not processed and input.KeyCode == settings.ToggleKey then
+				isVisible = not isVisible
+				TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
+					Position = isVisible and UDim2.new(0.5, -300, 0.5, -200) or UDim2.new(0.5, -300, 1, 100)
+				}):Play()
+			end
+		end)
+	end
+	bindToggleKey()
+
+	-- Смена горячей клавиши
+	local waitingForKey = false
+	keybindButton.MouseButton1Click:Connect(function()
+		if waitingForKey then return end
+		waitingForKey = true
+		keybindButton.Text = "Нажмите клавишу..."
+		local connection
+		connection = UserInputService.InputBegan:Connect(function(input, processed)
+			if not processed and input.UserInputType == Enum.UserInputType.Keyboard then
+				local newKey = input.KeyCode
+				if newKey ~= Enum.KeyCode.Unknown and newKey ~= Enum.KeyCode.RightShift then
+					settings.ToggleKey = newKey
+					keybindButton.Text = newKey.Name
+				else
+					keybindButton.Text = settings.ToggleKey.Name
+				end
+				waitingForKey = false
+				connection:Disconnect()
+			end
+		end)
 	end)
 
 	-- Боковое меню вкладок
-	local tabMenu = createInstance("Frame", {
+	tabMenu = createInstance("Frame", {
 		Size = UDim2.new(0, 150, 1, -40),
 		Position = UDim2.new(0, 0, 0, 40),
 		BackgroundColor3 = settings.Theme.SecondaryColor,
@@ -192,7 +363,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 	})
 
 	-- Контейнер вкладок
-	local tabContainer = createInstance("Frame", {
+	tabContainer = createInstance("Frame", {
 		Size = UDim2.new(1, -150, 1, -40),
 		Position = UDim2.new(0, 150, 0, 40),
 		BackgroundTransparency = 1,
@@ -206,8 +377,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		ScreenGui = screenGui,
 		Tabs = {},
 		Settings = settings,
-		TabContainer = tabContainer,
-		WarningFrame = nil
+		TabContainer = tabContainer
 	}
 
 	-- Уведомление
@@ -217,7 +387,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 		local notifFrame = createInstance("Frame", {
 			Size = UDim2.new(0, 250, 0, 60),
-			Position = UDim2.new(1, -260, 1, -70 - (#notifications * 65)),
+			Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65)),
 			BackgroundColor3 = settings.Theme.SecondaryColor,
 			BorderSizePixel = 0,
 			Parent = screenGui,
@@ -241,14 +411,17 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 		table.insert(notifications, notifFrame)
 
-		-- Анимация
-		notifFrame.Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65))
-		TweenService:Create(notifFrame, TweenInfo.new(0.5), {Position = UDim2.new(1, -260, 1, -70 - (#notifications * 65))}):Play()
+		-- Анимация появления
+		TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
+			Position = UDim2.new(1, -260, 1, -70 - (#notifications * 65))
+		}):Play()
 
-		-- Удаление
+		-- Удаление с анимацией
 		task.spawn(function()
 			task.wait(duration)
-			TweenService:Create(notifFrame, TweenInfo.new(0.5), {Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65))}):Play()
+			TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {
+				Position = UDim2.new(1, 0, 1, -70 - (#notifications * 65))
+			}):Play()
 			task.wait(0.5)
 			for i, n in ipairs(notifications) do
 				if n == notifFrame then table.remove(notifications, i) end
@@ -260,77 +433,51 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		end)
 	end
 
-	-- Предупреждение
-	function window:CreateWarning(message, onYes, onNo)
-		if self.WarningFrame then
-			self.WarningFrame:Destroy()
+	-- Смена темы
+	function window:SetTheme(themeName)
+		if themeName == "Light" then
+			settings.Theme = {
+				PrimaryColor = Color3.fromRGB(240, 240, 240),
+				SecondaryColor = Color3.fromRGB(220, 220, 220),
+				AccentColor = Color3.fromRGB(65, 105, 225),
+				TextColor = Color3.fromRGB(30, 30, 30),
+				ErrorColor = Color3.fromRGB(220, 50, 50),
+				ShadowColor = Color3.fromRGB(100, 100, 100),
+				Font = Enum.Font.Gotham,
+				FontBold = Enum.Font.GothamBold
+			}
+		else
+			settings.Theme = defaultTheme
 		end
-		local warningFrame = createInstance("Frame", {
-			Size = UDim2.new(0, 300, 0, 150),
-			Position = UDim2.new(0.5, -150, 0.5, -75),
-			BackgroundColor3 = settings.Theme.PrimaryColor,
-			BorderSizePixel = 0,
-			Parent = self.ScreenGui,
-			ZIndex = 100
-		})
-		local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = warningFrame})
-		local messageLabel = createInstance("TextLabel", {
-			Size = UDim2.new(1, -20, 0, 60),
-			Position = UDim2.new(0, 10, 0, 10),
-			BackgroundTransparency = 1,
-			Text = message,
-			TextColor3 = settings.Theme.TextColor,
-			Font = settings.Theme.Font,
-			TextSize = 16,
-			TextWrapped = true,
-			Parent = warningFrame,
-			ZIndex = 101
-		})
-		local yesButton = createInstance("TextButton", {
-			Size = UDim2.new(0, 80, 0, 30),
-			Position = UDim2.new(0.2, -40, 1, -40),
-			BackgroundColor3 = settings.Theme.AccentColor,
-			Text = "Да",
-			TextColor3 = settings.Theme.TextColor,
-			Font = settings.Theme.Font,
-			TextSize = 14,
-			Parent = warningFrame,
-			ZIndex = 101
-		})
-		local noButton = createInstance("TextButton", {
-			Size = UDim2.new(0, 80, 0, 30),
-			Position = UDim2.new(0.8, -40, 1, -40),
-			BackgroundColor3 = settings.Theme.SecondaryColor,
-			Text = "Нет",
-			TextColor3 = settings.Theme.TextColor,
-			Font = settings.Theme.Font,
-			TextSize = 14,
-			Parent = warningFrame,
-			ZIndex = 101
-		})
-		local uICornerYes = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = yesButton})
-		local uICornerNo = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = noButton})
-		yesButton.MouseButton1Click:Connect(function()
-			if onYes then onYes() end
-			warningFrame:Destroy()
-			self.WarningFrame = nil
-		end)
-		noButton.MouseButton1Click:Connect(function()
-			if onNo then onNo() end
-			warningFrame:Destroy()
-			self.WarningFrame = nil
-		end)
-		self.WarningFrame = warningFrame
-	end
+		settings.ThemeName = themeName
 
-	-- Обработка кнопки закрытия
-	closeButton.MouseButton1Click:Connect(function()
-		window:CreateWarning("Вы действительно хотите закрыть GUI навсегда?", function()
-			window:Destroy()
-		end, function()
-			-- Ничего не делать
-		end)
-	end)
+		-- Обновление цветов с анимацией
+		TweenService:Create(mainFrame, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.PrimaryColor}):Play()
+		TweenService:Create(titleBar, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor}):Play()
+		TweenService:Create(titleLabel, TweenInfo.new(0.3), {TextColor3 = settings.Theme.TextColor}):Play()
+		TweenService:Create(closeButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.ErrorColor, TextColor3 = settings.Theme.TextColor}):Play()
+		TweenService:Create(settingsButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor, TextColor3 = settings.Theme.TextColor}):Play()
+		TweenService:Create(tabMenu, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor}):Play()
+		TweenService:Create(shadow, TweenInfo.new(0.3), {ImageColor3 = settings.Theme.ShadowColor}):Play()
+		TweenService:Create(settingsFrame, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor}):Play()
+		TweenService:Create(settingsLabel, TweenInfo.new(0.3), {TextColor3 = settings.Theme.TextColor}):Play()
+		TweenService:Create(keybindLabel, TweenInfo.new(0.3), {TextColor3 = settings.Theme.TextColor}):Play()
+		TweenService:Create(keybindButton, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor, TextColor3 = settings.Theme.TextColor}):Play()
+		for _, tab in ipairs(window.Tabs) do
+			TweenService:Create(tab.Button, TweenInfo.new(0.3), {
+				BackgroundColor3 = tab.Content.Visible and settings.Theme.AccentColor or settings.Theme.SecondaryColor,
+				TextColor3 = settings.Theme.TextColor
+			}):Play()
+			for _, element in ipairs(tab.Elements) do
+				if element:IsA("Frame") or element:IsA("TextButton") then
+					TweenService:Create(element, TweenInfo.new(0.3), {BackgroundColor3 = settings.Theme.SecondaryColor}):Play()
+					if element:IsA("TextButton") then
+						TweenService:Create(element, TweenInfo.new(0.3), {TextColor3 = settings.Theme.TextColor}):Play()
+					end
+				end
+			end
+		end
+	end
 
 	-- Создание вкладки
 	function window:CreateTab(name)
@@ -377,7 +524,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		local tab = {Button = tabButton, Content = tabContent, Elements = {}}
 		table.insert(window.Tabs, tab)
 
-		-- Переключение вкладок
+		-- Переключение вкладок с анимацией
 		tabButton.MouseButton1Click:Connect(function()
 			for _, otherTab in ipairs(window.Tabs) do
 				otherTab.Content.Visible = false
@@ -553,8 +700,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 					if tick() - lastUpdate < 0.05 then return end -- Дебаунс
 					local relativeX = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
 					local value = math.floor(min + (max - min) * relativeX)
-					fill.Size = UDim2.new(relativeX, 0, 1, 0)
-					knob.Position = UDim2.new(relativeX, -8, 0, -3)
+					TweenService:Create(fill, TweenInfo.new(0.2), {Size = UDim2.new(relativeX, 0, 1, 0)}):Play()
+					TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(relativeX, -8, 0, -3)}):Play()
 					label.Text = name .. ": " .. value
 					local success, err = pcall(function() callback(value) end)
 					if not success then window:CreateNotification("Ошибка ползунка: " .. tostring(err), 5) end
@@ -611,7 +758,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 				Parent = dropdownList
 			})
 
-			for _, option in ipairs(options) do
+			for i, option in ipairs(options) do
 				local item = createInstance("TextButton", {
 					Size = UDim2.new(1, 0, 0, 28),
 					BackgroundColor3 = settings.Theme.SecondaryColor,
@@ -620,7 +767,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 					Font = settings.Theme.Font,
 					TextSize = 14,
 					Parent = dropdownList,
-					ZIndex = 11
+					ZIndex = 11,
+					Position = UDim2.new(0, 0, 0, (i-1) * 30)
 				})
 
 				local uICornerItem = createInstance("UICorner", {CornerRadius = UDim.new(0, 4), Parent = item})
@@ -642,6 +790,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 			dropdownButton.MouseButton1Click:Connect(function()
 				dropdownList.Visible = not dropdownList.Visible
+				TweenService:Create(dropdownList, TweenInfo.new(0.3), {BackgroundTransparency = dropdownList.Visible and 0 or 1}):Play()
 			end)
 
 			-- Закрытие списка
@@ -658,6 +807,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 						mousePos.Y >= listPos.Y and mousePos.Y <= listPos.Y + listSize.Y
 					if not (inButton or inList) then
 						dropdownList.Visible = false
+						TweenService:Create(dropdownList, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
 					end
 				end
 			end)
@@ -802,7 +952,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 				Size = UDim2.new(0, 30, 0, 30),
 				Position = UDim2.new(1, -35, 0, 2),
 				BackgroundColor3 = default,
-				Parent = colorPickerFrame,
+				Parent =s = colorPickerFrame,
 				ZIndex = 4
 			})
 
@@ -878,7 +1028,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 				local sat = svIndicator.Position.X.Scale
 				local val = 1 - svIndicator.Position.Y.Scale
 				local color = Color3.fromHSV(hue, sat, val)
-				colorButton.BackgroundColor3 = color
+				TweenService:Create(colorButton, TweenInfo.new(0.2), {BackgroundColor3 = color}):Play()
 				uIGradientSV.Color = ColorSequence.new{
 					ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
 					ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, 1, 1))
@@ -919,13 +1069,13 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 				if input.UserInputType == Enum.UserInputType.MouseMovement then
 					if isDraggingHue then
 						local relativeY = math.clamp((input.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
-						hueIndicator.Position = UDim2.new(0, 0, relativeY, 0)
+						TweenService:Create(hueIndicator, TweenInfo.new(0.1), {Position = UDim2.new(0, 0, relativeY, 0)}):Play()
 						updateColor()
 					end
 					if isDraggingSV then
 						local relativeX = math.clamp((input.Position.X - saturationValue.AbsolutePosition.X) / saturationValue.AbsoluteSize.X, 0, 1)
 						local relativeY = math.clamp((input.Position.Y - saturationValue.AbsolutePosition.Y) / saturationValue.AbsoluteSize.Y, 0, 1)
-						svIndicator.Position = UDim2.new(relativeX, 0, relativeY, 0)
+						TweenService:Create(svIndicator, TweenInfo.new(0.1), {Position = UDim2.new(relativeX, 0, relativeY, 0)}):Play()
 						updateColor()
 					end
 				end
@@ -934,6 +1084,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 			colorButton.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					colorPicker.Visible = not colorPicker.Visible
+					TweenService:Create(colorPicker, TweenInfo.new(0.3), {BackgroundTransparency = colorPicker.Visible and 0 or 1}):Play()
 				end
 			end)
 
@@ -973,6 +1124,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 	-- Уничтожение
 	function window:Destroy()
+		TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -300, 1, 100)}):Play()
+		task.wait(0.5)
 		local success, err = pcall(function() screenGui:Destroy() end)
 		if not success then warn("Ошибка уничтожения: " .. tostring(err)) end
 	end
