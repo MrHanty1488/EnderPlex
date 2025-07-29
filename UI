@@ -1,7 +1,7 @@
 -- EnderPlex.lua
--- Версия: 2.4
+-- Версия: 1.5
 -- Библиотека для GUI в Roblox, работает с KRNL
--- Все баги исправлены, добавлены настройки
+-- Обновления: удален прогресс-бар, добавлены анимации, предупреждение при закрытии, настройки только через библиотеку
 
 local EnderPlex = {}
 
@@ -67,13 +67,14 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 	-- Основной фрейм
 	local mainFrame = createInstance("Frame", {
 		Size = UDim2.new(0, 600, 0, 400),
-		Position = UDim2.new(0.5, -300, 0.5, -200),
+		Position = UDim2.new(0.5, -300, 0, -400), -- Начальная позиция вне экрана
 		BackgroundColor3 = settings.Theme.PrimaryColor,
 		BorderSizePixel = 0,
 		Active = true,
 		Draggable = true,
 		Parent = screenGui,
-		ZIndex = 1
+		ZIndex = 1,
+		Visible = false
 	})
 
 	local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = mainFrame})
@@ -131,138 +132,51 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 
 	local uICornerClose = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = closeButton})
 
-	-- Кнопка настроек
-	local settingsButton = createInstance("TextButton", {
-		Size = UDim2.new(0, 30, 0, 30),
-		Position = UDim2.new(1, -70, 0, 5),
-		BackgroundColor3 = settings.Theme.SecondaryColor,
-		Text = "⚙",
-		TextColor3 = settings.Theme.TextColor,
-		Font = settings.Theme.Font,
-		TextSize = 14,
-		Parent = titleBar,
-		ZIndex = 3
-	})
+	-- Анимация кнопки
+	closeButton.MouseEnter:Connect(function()
+		TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
+			lerp(closeButton.BackgroundColor3.R * 255, 255, 0.2),
+			lerp(closeButton.BackgroundColor3.G * 255, 100, 0.2),
+			lerp(closeButton.BackgroundColor3.B * 255, 100, 0.2)
+		)}):Play()
+	end)
+	closeButton.MouseLeave:Connect(function()
+		TweenService:Create(closeButton, TweenInfo.new(0.2), {BackgroundColor3 = settings.Theme.ErrorColor}):Play()
+	end)
 
-	local uICornerSettings = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsButton})
-
-	-- Анимация кнопок
-	for _, btn in ipairs({closeButton, settingsButton}) do
-		btn.MouseEnter:Connect(function()
-			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
-				lerp(btn.BackgroundColor3.R * 255, 255, 0.2),
-				lerp(btn.BackgroundColor3.G * 255, 100, 0.2),
-				lerp(btn.BackgroundColor3.B * 255, 100, 0.2)
-			)}):Play()
-		end)
-		btn.MouseLeave:Connect(function()
-			TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = btn == closeButton and settings.Theme.ErrorColor or settings.Theme.SecondaryColor}):Play()
-		end)
+	-- Функции анимации
+	local isVisible = false
+	local function showGUI()
+		if isVisible then return end
+		isVisible = true
+		mainFrame.Visible = true
+		local tween = TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -300, 0.5, -200)})
+		tween:Play()
 	end
 
-	-- Фрейм настроек
-	local settingsFrame = createInstance("Frame", {
-		Size = UDim2.new(1, -20, 1, -60),
-		Position = UDim2.new(0, 10, 0, 50),
-		BackgroundColor3 = settings.Theme.SecondaryColor,
-		BorderSizePixel = 0,
-		Parent = mainFrame,
-		ZIndex = 5,
-		Visible = false
-	})
-
-	local uICornerSettingsFrame = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsFrame})
-
-	local settingsLabel = createInstance("TextLabel", {
-		Size = UDim2.new(1, -10, 0, 30),
-		Position = UDim2.new(0, 5, 0, 5),
-		BackgroundTransparency = 1,
-		Text = "Настройки",
-		TextColor3 = settings.Theme.TextColor,
-		Font = settings.Theme.FontBold,
-		TextSize = 16,
-		Parent = settingsFrame,
-		ZIndex = 6
-	})
-
-	local keybindLabel = createInstance("TextLabel", {
-		Size = UDim2.new(0, 150, 0, 30),
-		Position = UDim2.new(0, 5, 0, 40),
-		BackgroundTransparency = 1,
-		Text = "Горячая клавиша:",
-		TextColor3 = settings.Theme.TextColor,
-		Font = settings.Theme.Font,
-		TextSize = 14,
-		Parent = settingsFrame,
-		ZIndex = 6
-	})
-
-	local keybindButton = createInstance("TextButton", {
-		Size = UDim2.new(0, 100, 0, 30),
-		Position = UDim2.new(0, 160, 0, 40),
-		BackgroundColor3 = settings.Theme.SecondaryColor,
-		Text = settings.ToggleKey.Name,
-		TextColor3 = settings.Theme.TextColor,
-		Font = settings.Theme.Font,
-		TextSize = 14,
-		Parent = settingsFrame,
-		ZIndex = 6
-	})
-
-	local uICornerKeybind = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindButton})
-
-	-- Логика видимости
-	local isVisible = true
-	local isSettingsOpen = false
-	local tabContainer, tabMenu = nil, nil
-
-	closeButton.MouseButton1Click:Connect(function()
-		isVisible = not isVisible
-		mainFrame.Visible = isVisible
-	end)
-
-	settingsButton.MouseButton1Click:Connect(function()
-		isSettingsOpen = not isSettingsOpen
-		settingsFrame.Visible = isSettingsOpen
-		if tabContainer then tabContainer.Visible = not isSettingsOpen end
-		if tabMenu then tabMenu.Visible = not isSettingsOpen end
-	end)
+	local function hideGUI()
+		if not isVisible then return end
+		local tween = TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -300, 0, -400)})
+		tween:Play()
+		tween.Completed:Connect(function()
+			mainFrame.Visible = false
+			isVisible = false
+		end)
+	end
 
 	-- Горячая клавиша
-	local function bindToggleKey()
-		UserInputService.InputBegan:Connect(function(input, processed)
-			if not processed and input.KeyCode == settings.ToggleKey then
-				isVisible = not isVisible
-				mainFrame.Visible = isVisible
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == settings.ToggleKey then
+			if isVisible then
+				hideGUI()
+			else
+				showGUI()
 			end
-		end)
-	end
-	bindToggleKey()
-
-	-- Смена горячей клавиши
-	local waitingForKey = false
-	keybindButton.MouseButton1Click:Connect(function()
-		if waitingForKey then return end
-		waitingForKey = true
-		keybindButton.Text = "Нажмите клавишу..."
-		local connection
-		connection = UserInputService.InputBegan:Connect(function(input, processed)
-			if not processed and input.UserInputType == Enum.UserInputType.Keyboard then
-				local newKey = input.KeyCode
-				if newKey ~= Enum.KeyCode.Unknown and newKey ~= Enum.KeyCode.RightShift then
-					settings.ToggleKey = newKey
-					keybindButton.Text = newKey.Name
-				else
-					keybindButton.Text = settings.ToggleKey.Name
-				end
-				waitingForKey = false
-				connection:Disconnect()
-			end
-		end)
+		end
 	end)
 
 	-- Боковое меню вкладок
-	tabMenu = createInstance("Frame", {
+	local tabMenu = createInstance("Frame", {
 		Size = UDim2.new(0, 150, 1, -40),
 		Position = UDim2.new(0, 0, 0, 40),
 		BackgroundColor3 = settings.Theme.SecondaryColor,
@@ -278,7 +192,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 	})
 
 	-- Контейнер вкладок
-	tabContainer = createInstance("Frame", {
+	local tabContainer = createInstance("Frame", {
 		Size = UDim2.new(1, -150, 1, -40),
 		Position = UDim2.new(0, 150, 0, 40),
 		BackgroundTransparency = 1,
@@ -292,7 +206,8 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		ScreenGui = screenGui,
 		Tabs = {},
 		Settings = settings,
-		TabContainer = tabContainer
+		TabContainer = tabContainer,
+		WarningFrame = nil
 	}
 
 	-- Уведомление
@@ -345,52 +260,77 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		end)
 	end
 
-	-- Смена темы
-	function window:SetTheme(themeName)
-		if themeName == "Light" then
-			settings.Theme = {
-				PrimaryColor = Color3.fromRGB(240, 240, 240),
-				SecondaryColor = Color3.fromRGB(220, 220, 220),
-				AccentColor = Color3.fromRGB(65, 105, 225),
-				TextColor = Color3.fromRGB(30, 30, 30),
-				ErrorColor = Color3.fromRGB(220, 50, 50),
-				ShadowColor = Color3.fromRGB(100, 100, 100),
-				Font = Enum.Font.Gotham,
-				FontBold = Enum.Font.GothamBold
-			}
-		else
-			settings.Theme = defaultTheme
+	-- Предупреждение
+	function window:CreateWarning(message, onYes, onNo)
+		if self.WarningFrame then
+			self.WarningFrame:Destroy()
 		end
-		settings.ThemeName = themeName
-
-		-- Обновление цветов
-		mainFrame.BackgroundColor3 = settings.Theme.PrimaryColor
-		titleBar.BackgroundColor3 = settings.Theme.SecondaryColor
-		titleLabel.TextColor3 = settings.Theme.TextColor
-		closeButton.BackgroundColor3 = settings.Theme.ErrorColor
-		closeButton.TextColor3 = settings.Theme.TextColor
-		settingsButton.BackgroundColor3 = settings.Theme.SecondaryColor
-		settingsButton.TextColor3 = settings.Theme.TextColor
-		tabMenu.BackgroundColor3 = settings.Theme.SecondaryColor
-		shadow.ImageColor3 = settings.Theme.ShadowColor
-		settingsFrame.BackgroundColor3 = settings.Theme.SecondaryColor
-		settingsLabel.TextColor3 = settings.Theme.TextColor
-		keybindLabel.TextColor3 = settings.Theme.TextColor
-		keybindButton.BackgroundColor3 = settings.Theme.SecondaryColor
-		keybindButton.TextColor3 = settings.Theme.TextColor
-		for _, tab in ipairs(window.Tabs) do
-			tab.Button.BackgroundColor3 = tab.Content.Visible and settings.Theme.AccentColor or settings.Theme.SecondaryColor
-			tab.Button.TextColor3 = settings.Theme.TextColor
-			for _, element in ipairs(tab.Elements) do
-				if element:IsA("Frame") or element:IsA("TextButton") then
-					element.BackgroundColor3 = settings.Theme.SecondaryColor
-					if element:IsA("TextButton") then
-						element.TextColor3 = settings.Theme.TextColor
-					end
-				end
-			end
-		end
+		local warningFrame = createInstance("Frame", {
+			Size = UDim2.new(0, 300, 0, 150),
+			Position = UDim2.new(0.5, -150, 0.5, -75),
+			BackgroundColor3 = settings.Theme.PrimaryColor,
+			BorderSizePixel = 0,
+			Parent = self.ScreenGui,
+			ZIndex = 100
+		})
+		local uICorner = createInstance("UICorner", {CornerRadius = UDim.new(0, 8), Parent = warningFrame})
+		local messageLabel = createInstance("TextLabel", {
+			Size = UDim2.new(1, -20, 0, 60),
+			Position = UDim2.new(0, 10, 0, 10),
+			BackgroundTransparency = 1,
+			Text = message,
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 16,
+			TextWrapped = true,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+		local yesButton = createInstance("TextButton", {
+			Size = UDim2.new(0, 80, 0, 30),
+			Position = UDim2.new(0.2, -40, 1, -40),
+			BackgroundColor3 = settings.Theme.AccentColor,
+			Text = "Да",
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 14,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+		local noButton = createInstance("TextButton", {
+			Size = UDim2.new(0, 80, 0, 30),
+			Position = UDim2.new(0.8, -40, 1, -40),
+			BackgroundColor3 = settings.Theme.SecondaryColor,
+			Text = "Нет",
+			TextColor3 = settings.Theme.TextColor,
+			Font = settings.Theme.Font,
+			TextSize = 14,
+			Parent = warningFrame,
+			ZIndex = 101
+		})
+		local uICornerYes = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = yesButton})
+		local uICornerNo = createInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = noButton})
+		yesButton.MouseButton1Click:Connect(function()
+			if onYes then onYes() end
+			warningFrame:Destroy()
+			self.WarningFrame = nil
+		end)
+		noButton.MouseButton1Click:Connect(function()
+			if onNo then onNo() end
+			warningFrame:Destroy()
+			self.WarningFrame = nil
+		end)
+		self.WarningFrame = warningFrame
 	end
+
+	-- Обработка кнопки закрытия
+	closeButton.MouseButton1Click:Connect(function()
+		window:CreateWarning("Вы действительно хотите закрыть GUI навсегда?", function()
+			window:Destroy()
+		end, function()
+			-- Ничего не делать
+		end)
+	end)
 
 	-- Создание вкладки
 	function window:CreateTab(name)
@@ -659,7 +599,7 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 				CanvasSize = UDim2.new(0, 0, 0, #options * 30),
 				ScrollBarThickness = 4,
 				ScrollBarImageColor3 = settings.Theme.AccentColor,
-				Parent = tabContent, -- Перемещено в tabContent
+				Parent = tabContent,
 				ZIndex = 10
 			})
 
@@ -1000,61 +940,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 			table.insert(tab.Elements, colorPickerFrame)
 		end
 
-		-- Прогресс-бар
-		function tab:CreateProgressBar(name, value, maxValue)
-			if type(name) ~= "string" or type(value) ~= "number" or type(maxValue) ~= "number" then return end
-
-			local progressFrame = createInstance("Frame", {
-				Size = UDim2.new(1, 0, 0, 50),
-				BackgroundTransparency = 1,
-				Parent = tabContent,
-				ZIndex = 3
-			})
-
-			local progressLabel = createInstance("TextLabel", {
-				Size = UDim2.new(1, -10, 0, 20),
-				Position = UDim2.new(0, 5, 0, 0),
-				BackgroundTransparency = 1,
-				Text = name .. ": " .. math.floor(value / maxValue * 100) .. "%",
-				TextColor3 = settings.Theme.TextColor,
-				Font = settings.Theme.Font,
-				TextSize = 14,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Parent = progressFrame,
-				ZIndex = 4
-			})
-
-			local progressBar = createInstance("Frame", {
-				Size = UDim2.new(1, -10, 0, 10),
-				Position = UDim2.new(0, 5, 0, 25),
-				BackgroundColor3 = settings.Theme.SecondaryColor,
-				Parent = progressFrame,
-				ZIndex = 4
-			})
-
-			local uICornerBar = createInstance("UICorner", {CornerRadius = UDim.new(0, 5), Parent = progressBar})
-
-			local fill = createInstance("Frame", {
-				Size = UDim2.new(value / maxValue, 0, 1, 0),
-				BackgroundColor3 = settings.Theme.AccentColor,
-				BorderSizePixel = 0,
-				Parent = progressBar,
-				ZIndex = 5
-			})
-
-			local uICornerFill = createInstance("UICorner", {CornerRadius = UDim.new(0, 5), Parent = fill})
-
-			function progressFrame:SetValue(newValue)
-				if type(newValue) == "number" and newValue >= 0 and newValue <= maxValue then
-					TweenService:Create(fill, TweenInfo.new(0.3), {Size = UDim2.new(newValue / maxValue, 0, 1, 0)}):Play()
-					progressLabel.Text = name .. ": " .. math.floor(newValue / maxValue * 100) .. "%"
-				end
-			end
-
-			table.insert(tab.Elements, progressFrame)
-			return progressFrame
-		end
-
 		-- Метка
 		function tab:CreateLabel(text)
 			if type(text) ~= "string" then return end
@@ -1101,7 +986,6 @@ function EnderPlex:CreateWindow(title, toggleKey, customTheme)
 		testTab:CreateToggle("Переключатель", true, function(v) print("Переключатель: " .. v) end)
 		testTab:CreateTextBox("Текст", "Ввод", function(t) print("Текст: " .. t) end)
 		testTab:CreateColorPicker("Цвет", Color3.fromRGB(255, 0, 0), function(c) print("Цвет: " .. c:ToHex()) end)
-		testTab:CreateProgressBar("Прогресс", 50, 100)
 		testTab:CreateLabel("Метка")
 		window:CreateNotification("Тест завершен", 3)
 	end
